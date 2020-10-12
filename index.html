@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>Bootstrap 101 Template</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" type="text/css"
+        href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css">
+
+    <script src='https://kit.fontawesome.com/a076d05399.js'></script>
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+
+<body>
+    <div style="margin: 2em 5em;">
+        <h1>Print PDF</h1>
+        <form>
+            <div class="form-row">
+                <div class="form-group col-md-6" id="fileDiv">
+                    <label for="inputFile">Upload File</label>
+                    <input type="file" class="form-control" id="inputFile" accept=".pdf" required>
+                </div>
+                <div class="form-group col-md-1">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input-pages" type="radio" name="pageRangeRadio" id="inlineRadioRange1"
+                            value="all" checked>
+                        <label class="form-check-label" for="inlineRadio1">All</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input-pages" type="radio" name="pageRangeRadio" id="inlineRadioRange2"
+                            value="pages">
+                        <label class="form-check-label" for="inlineRadio2">Pages</label>
+                    </div>
+                </div>
+                <div class="form-group col-md-5">
+                    <label for="inputFile">Page Range</label>
+                    <input type="text" class="form-control" id="pageRange" placeholder="For Example, 3, 5-12" disabled>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-4" id="paperSizeDiv">
+                    <label for="paperSize">Paper Size</label>
+                    <select id="paperSize" class="form-control" required>
+                        <option selected disabled hidden>Choose...</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-2">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input-color" type="radio" name="colorRadio" id="inlineRadioColor1"
+                            value="color" checked>
+                        <label class="form-check-label" for="inlineRadio1">Color</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input-color" type="radio" name="colorRadio" id="inlineRadioColor2"
+                            value="monochrome">
+                        <label class="form-check-label" for="inlineRadio2">Black and White</label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="inputCopies">Copies</label>
+                    <input type="number" class="form-control" id="copies" value="1">
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="printerSelector">Printer</label>
+                    <select id="printerSelector" class="form-control" required>
+                        <option selected disabled hidden>Choose...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-2">
+                    <button type="submit" id="submitButton" class="btn btn-primary" disabled><span
+                            id="print">Print</span></button>
+                </div>
+            </div>
+        </form>
+
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"
+        integrity="sha384-nvAa0+6Qg9clwYCGGPpDQLVpLNn0fRaROjHqs13t4Ggj3Ez50XnGQqc/r8MhnRDZ"
+        crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"
+        integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd"
+        crossorigin="anonymous"></script>
+</body>
+<script>
+    $(document).ready(function () {
+        var fileName;
+        $("#inputFile").val('');
+        getPrinterList();
+        getPageSizes();
+
+        $("#inputFile").on('change', () => {
+            $('.alert').alert('close')
+            $("#error").remove()
+            const notValidated = fileValidation()
+            console.log(notValidated);
+            if (notValidated) {
+                $("#fileDiv").append(`<div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    <strong>Invalid File Type!</strong> Make Sure you Upload a PDF file.
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>`)
+                $("#inputFile").val('')
+            }
+            else {
+                console.log("Sending...");
+                $("#fileDiv").append(`<div id="uploading">Uploading...<div class="spinner-border" role="status">
+                                        <span class="sr-only">Loading...</span>
+                                        </div></div>`);
+                var data = new FormData();
+                $.each($('#inputFile')[0].files, function (i, file) {
+                    data.append('file-' + i, file);
+                });
+                $.ajax({
+                    url: '/file',
+                    data: data,
+                    cache: false,
+                    contentType: false,
+                    processData: false,
+                    method: 'POST',
+                    type: 'POST', // For jQuery < 1.9
+                    success: function (data) {
+                        console.log(data)
+                        fileName = data.fileName
+                        $("#fileDiv").append(`<div id="message">Successfully Uploaded <span id="fileName">` + data.fileName + `</span></div>`);
+                        $("#uploading").remove()
+                    },
+                    error: function (err) {
+                        console.log(err)
+                        fileName = data.fileName
+                        $("#fileDiv").append(`<div id="error">Could Not Upload File</div>`);
+                        $("#uploading").remove()
+                    }
+                });
+
+            }
+
+
+        });
+        $("#edit").on('click', () => {
+            $('#paperSizesModal').modal('show')
+            console.log("clicked")
+        })
+        $(".form-check-input-pages").on('change', (e) => {
+            e.preventDefault()
+            const selected = $('input[name=pageRangeRadio]:checked').val()
+            if (selected === 'all')
+                $('#pageRange').prop('disabled', true)
+            else
+                $('#pageRange').removeProp('disabled')
+        })
+        $('#paperSize').on('change', () => {
+            if ($('#paperSize').val() === 'custom') {
+                $("#paperSizeDiv").append(`<label for="customPaperSize" id="labelCustomPaperSize">Custom Paper Size</label><input type="text" required class="form-control" id="customPaperSize" placeholder="Enter name of paper size">`)
+            }
+            else {
+                $('#customPaperSize').remove()
+                $('#labelCustomPaperSize').remove()
+            }
+        })
+        $("#copies").on('change', (e) => {
+            e.preventDefault()
+            const value = $('#copies').val()
+            if (value < 1)
+                $('#copies').val('1')
+        })
+        $("form").submit(function (e) {
+            e.preventDefault()
+            $("#print").remove()
+            $("#submitButton").append(`<div class="spinner-border" role="status" id="loading">
+                                    <span class="sr-only">Loading...</span>
+                                    </div>`)
+            $("#submitButton").prop('disabled', true)
+            const data = {
+                fileName: fileName,
+                pages: $('input[name=pageRangeRadio]:checked').val(),
+                range: $("#pageRange").val(),
+                size: $("#paperSize").val() === 'custom' ? $('#customPaperSize').val() : $("#paperSize").val(),
+                color: $('input[name=colorRadio]:checked').val(),
+                copies: $("#copies").val(),
+                printer: $("#printerSelector").val()
+            }
+            console.log(data)
+            $.ajax({
+                url: '/postForm',
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (result) {
+                    $("#submitButton").append(`<span
+                            id="print">Print</span></button>`)
+                    $("#submitButton").removeProp("disabled")
+                    $("#loading").remove()
+                    $('body').append(`<div class="alert alert-success alert-dismissible fade show" role="alert" style="margin:2em 5em" id="successPrint">
+                        <strong>Print Job Sent for ${fileName}</strong>
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        </div>`)
+                    console.log(result)
+                    setTimeout(function () { $("#successPrint").remove() }, 2000)
+                },
+                error: function (err) {
+                    $("#submitButton").append(`<span
+                            id="print">Print</span></button>`)
+
+                    $("#loading").remove()
+                    $('body').append(`<div class="alert alert-danger alert-dismissible fade show" role="alert" style="margin:2em 5em" id="failPrint">
+                        <strong>An Error ha occured!</strong>
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        </div>`)
+                    console.log(err)
+                    setTimeout(function () { $("#failPrint").remove() }, 2000)
+                }
+            })
+        })
+        function getPrinterList() {
+            $.ajax({
+                url: "/list",
+                beforeSend: function () {
+                    $('#submitButton').prop('disabled', true)
+                },
+                success: function (result) {
+                    var options = '';
+                    for (let data of result.data)
+                        options += '<option value="' + data + '">' + data + '</option>'
+                    $('#printerSelector').append(options)
+                    $("#submitButton").removeProp("disabled")
+                    console.log(options)
+                },
+                error: function (err) {
+                    alert('Could Not Print Options!')
+                    $('h1').before(`<div class="alert alert-danger" role="alert">
+                                    Could Not Printer Options!
+                                    </div>`)
+                }
+            });
+        }
+        function getPageSizes() {
+            $.ajax({
+                url: "/pageSizes",
+                beforeSend: function () {
+                    $('#submitButton').prop('disabled', true)
+                    $('#edit').prop('disabled', true)
+                },
+                success: function (result) {
+                    var options = '';
+                    var first_flag = true;
+                    for (let data of result.page_sizes) {
+                        if (first_flag) {
+                            options += '<option selected value="' + data + '">' + data + '</option>'
+                            first_flag = false
+                        }
+                        else {
+                            options += '<option value="' + data + '">' + data + '</option>'
+                        }
+                    }
+                    options += '<option value="custom">custom</option>'
+                    $('#paperSize').append(options)
+                    $("#submitButton").removeProp("disabled")
+                    $('#edit').removeProp('disabled')
+                    console.log(options)
+                },
+                error: function (err) {
+                    alert('Could Not Load Page Sizes!')
+                    $('h1').before(`<div class="alert alert-danger" role="alert">
+                                    Could Not Load Page Sizes!
+                                    </div>`)
+                }
+            });
+        }
+        function fileValidation() {
+            const filepath = $('#inputFile').val()
+            console.log(filepath)
+            const allowedExtensions = /(\.pdf)$/i;
+            console.log(!allowedExtensions.exec(filepath))
+            return !allowedExtensions.exec(filepath)
+        }
+    });
+</script>
+
+</html>
